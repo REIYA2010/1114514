@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>NO1</title>
+  <style>
+    body { margin:0; overflow:hidden; background:skyblue; font-family:sans-serif; }
+    #game { position:relative; width:100vw; height:100vh; overflow:hidden; }
+    .player { position:absolute; bottom:50px; left:50px; width:50px; height:50px; background:red; border-radius:10px; }
+    .obstacle { position:absolute; bottom:50px; right:0; width:50px; height:50px; background:green; }
+    .coin, .star, .mushroom { position:absolute; width:30px; height:30px; border-radius:50%; }
+    .coin { background:gold; border:2px solid #FFD700; }
+    .star { background:yellow; border:2px solid #FF0; }
+    .mushroom { background:orange; border:2px solid #FF8C00; }
+    .ground { position:absolute; bottom:0; left:0; width:100%; height:50px; background:#654321; }
+    #score { position:absolute; top:10px; left:10px; font-size:24px; color:white; }
+  </style>
+</head>
+<body>
+<div id="game">
+  <div id="score">スコア: 0</div>
+  <div class="player" id="player"></div>
+  <div class="ground"></div>
+</div>
+
+<audio id="jump-sound" src="https://www.soundjay.com/buttons/sounds/button-16.mp3"></audio>
+<audio id="coin-sound" src="https://www.soundjay.com/button/sounds/button-4.mp3"></audio>
+<script>
+  const player = document.getElementById('player');
+  const game = document.getElementById('game');
+  const scoreDisplay = document.getElementById('score');
+  const jumpSound = document.getElementById('jump-sound');
+  const coinSound = document.getElementById('coin-sound');
+
+  let isJumping = false, velocity = 0, gravity = -0.5, jumpPower = 12;
+  let groundY = 50, score = 0, speed = 5;
+  let isInvincible = false;
+
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space' && !isJumping) {
+      isJumping = true;
+      velocity = jumpPower;
+      jumpSound.play();
+    }
+  });
+
+  function createObstacle() {
+    const obstacle = document.createElement('div');
+    obstacle.classList.add('obstacle');
+    obstacle.style.right = '0px';
+    game.appendChild(obstacle);
+    let pos = window.innerWidth;
+
+    const interval = setInterval(() => {
+      pos -= speed;
+      obstacle.style.right = window.innerWidth - pos + 'px';
+
+      if (pos < 100 && pos > 50 && parseInt(player.style.bottom) < 100 && !isInvincible) {
+        alert('ゲームオーバー！スコア: ' + score);
+        location.reload();
+      }
+      if (pos < -50) {
+        clearInterval(interval);
+        obstacle.remove();
+      }
+    }, 20);
+  }
+
+  function createItem() {
+    const types = ['coin', 'star', 'mushroom'];
+    const type = types[Math.floor(Math.random() * types.length)];
+    const item = document.createElement('div');
+    item.classList.add(type);
+    item.style.right = '0px';
+    item.style.bottom = (Math.random() * 100 + 100) + 'px';  // ジャンプ可能範囲：100〜200px
+    game.appendChild(item);
+
+    let pos = window.innerWidth;
+    const interval = setInterval(() => {
+      pos -= speed;
+      item.style.right = window.innerWidth - pos + 'px';
+
+      if (pos < 100 && pos > 50) {
+        const playerBottom = parseInt(player.style.bottom);
+        const itemBottom = parseInt(item.style.bottom);
+        if (Math.abs(playerBottom - itemBottom) < 40) {
+          // アイテム取得処理
+          if (type === 'coin') {
+            score++;
+            coinSound.play();
+          } else if (type === 'star') {
+            score += 3;
+            coinSound.play();
+            isInvincible = true;
+            player.style.background = 'gold';
+            setTimeout(() => {
+              isInvincible = false;
+              player.style.background = 'red';
+            }, 5000);
+          } else if (type === 'mushroom') {
+            speed += 2;
+            score++;
+            coinSound.play();
+          }
+          scoreDisplay.textContent = 'スコア: ' + score;
+          item.remove();
+          clearInterval(interval);
+        }
+      }
+      if (pos < -30) {
+        clearInterval(interval);
+        item.remove();
+      }
+    }, 20);
+  }
+
+  setInterval(createObstacle, 2500);
+  setInterval(createItem, 1500);
+
+
+  function gameLoop() {
+    if (isJumping) {
+      player.style.bottom = parseInt(player.style.bottom || '50') + velocity + 'px';
+      velocity += gravity;
+      if (parseInt(player.style.bottom) <= groundY) {
+        player.style.bottom = groundY + 'px';
+        isJumping = false;
+        velocity = 0;
+      }
+    }
+    requestAnimationFrame(gameLoop);
+  }
+
+  player.style.bottom = groundY + 'px';
+  gameLoop();
+</script>
+</body>
+</html>
